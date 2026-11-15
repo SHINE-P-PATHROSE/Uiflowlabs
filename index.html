@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="description" content="UIFlow Labs is a creative technology agency building brands, digital products, websites, and custom software for what's next.">
+    <title>UIFlow Labs — Ideas into digital experiences</title>
+    <link rel="icon" type="image/png" href="assets/uiflowlabs-mark.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script>
+  </head>
+  <body data-site-content>
+    <header class="site-header">
+      <a class="brand" href="#home" aria-label="UIFlow Labs home">
+        <img class="brand-mark" src="assets/uiflowlabs-mark.png" alt="" data-content-image="branding.logo">
+        <span class="brand-name"><span data-content="branding.brandNameFirst">UI FLOW</span> <span data-content="branding.brandNameSecond">LABS</span></span>
+      </a>
+
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation">
+        <span></span><span></span>
+      </button>
+
+      <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
+        <a class="nav-link is-current" href="#home">Home</a>
+        <a class="nav-link" href="careers.html">Careers</a>
+        <a class="nav-link" href="#services">Services</a>
+        <a class="nav-link" href="#about">About Us</a>
+        <a class="nav-link" href="#contact">Contact Us</a>
+      </nav>
+
+      <button class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
+        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.4 8.4 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"/></svg>
+        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+        <span class="theme-toggle-knob" aria-hidden="true"></span>
+      </button>
+    </header>
+
+    <main>
+      <section class="hero section-wrap" id="home">
+        <div class="hero-copy">
+          <h1><span class="hero-title-desktop"><span data-content="home.desktopTitleFirst">Ideas Into Digital</span><br><span data-content="home.desktopTitleSecond">Impact</span></span><span class="hero-title-mobile"><span data-content="home.mobileTitleFirst">Ideas Into</span><br><span data-content="home.mobileTitleSecond">Digital Impact</span></span></h1>
+          <div class="hero-actions">
+            <a class="button button-dark" href="#work" data-content-href="home.primaryCtaHref"><span data-content="home.ctaText">Explore Our Work</span> <span class="button-arrow" aria-hidden="true">›</span></a>
+            <a class="button button-outline" href="#services" data-content-href="home.secondaryCtaHref" data-content="home.secondaryCtaText">What We Do</a>
+            <a class="button button-outline button-instagram" href="https://www.instagram.com/uiflow_labs?exln=MWRlcnB5NGU0YTdhcg==" target="_blank" rel="noreferrer">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle class="instagram-dot" cx="17.5" cy="6.8" r="1"/></svg>
+              Follow Us On Instagram
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-band" aria-label="UIFlow Labs at a glance">
+        <div class="stats-grid" data-content-list="stats">
+          <div class="stat">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 8.2 4.6v9.2L12 21.2l-8.2-4.6V7.4L12 2.8Z"/><path d="m3.8 7.4 8.2 4.7 8.2-4.7M12 12.1v9"/></svg>
+            <strong data-content="stats.0.value">250+</strong>
+            <span data-content="stats.0.label">Project Completed</span>
+          </div>
+          <div class="stat">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.2c-2.8-2.8-7.5-2.3-7.5 1.4 0 2.6 3.7 5.3 7.5 8 3.8-2.7 7.5-5.4 7.5-8 0-3.7-4.7-4.2-7.5-1.4Z"/><circle cx="5.5" cy="5.4" r="2"/><circle cx="12" cy="3.8" r="2.2"/><circle cx="18.5" cy="5.4" r="2"/><path d="M3.3 9.3H2v4h2.5m16.2-4H22v4h-2.5M9.8 7.5l-1 2.2m5.4-2.2 1 2.2"/></svg>
+            <strong data-content="stats.1.value">100+</strong>
+            <span data-content="stats.1.label">Happy Clients</span>
+          </div>
+          <div class="stat">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.2 5.2c2.2-2.2 4.7-2.7 7-2.4.3 2.3-.2 4.8-2.4 7L11 17.6l-4.6-4.6 7.8-7.8Z"/><path d="m9.5 14.5-4.8 1.1L3 20.8l5.2-1.7 1.1-4.6Zm4.8-7.1a1.8 1.8 0 1 0 2.5 2.5 1.8 1.8 0 0 0-2.5-2.5Z"/></svg>
+            <strong data-content="stats.2.value">1+</strong>
+            <span data-content="stats.2.label">Years Of Experience</span>
+          </div>
+          <template>
+            <div class="stat">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 8.2 4.6v9.2L12 21.2l-8.2-4.6V7.4L12 2.8Z"/><path d="m3.8 7.4 8.2 4.7 8.2-4.7M12 12.1v9"/></svg>
+              <strong data-list-text="value"></strong>
+              <span data-list-text="label"></span>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <section class="intro-band" aria-label="Our approach">
+        <div class="intro-inner section-wrap" data-content-align="intro.alignment">
+          <p class="intro-kicker" data-content="intro.kicker">SMALL DETAILS. BIGGER PICTURE.</p>
+          <p><span data-content="intro.startText">Good ideas deserve</span> <em data-content="intro.highlightText">great execution.</em></p>
+        </div>
+      </section>
+
+      <section class="services section-wrap" id="services">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow" data-content="services.eyebrow">From first sketch to what's next</p>
+            <h2><span data-content="services.titleFirst">All the right pieces.</span><br><span data-content="services.titleSecond">One creative team.</span></h2>
+          </div>
+          <p class="section-summary" data-content="services.summary">A creative technology agency for the whole journey: strategy, design, development, and everything that helps your business grow.</p>
+        </div>
+
+        <div class="services-grid" data-content-list="services.items">
+          <article class="service-card">
+            <span class="service-number">01</span>
+            <h3 data-content="services.items.0.title">UI/UX & product design</h3><p data-content="services.items.0.description">Clear, considered experiences built around the people who use them.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">02</span>
+            <h3 data-content="services.items.1.title">Website development</h3><p data-content="services.items.1.description">Fast, responsive websites that make a great first impression and keep working.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">03</span>
+            <h3 data-content="services.items.2.title">Mobile app development</h3><p data-content="services.items.2.description">Useful mobile experiences, designed for the way people really live.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">04</span>
+            <h3 data-content="services.items.3.title">Graphic design & branding</h3><p data-content="services.items.3.description">Distinctive identities and visual systems that help your brand feel like you.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">05</span>
+            <h3 data-content="services.items.4.title">Motion & video</h3><p data-content="services.items.4.description">Bring your message to life with motion, animation, and video production.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">06</span>
+            <h3 data-content="services.items.5.title">Digital marketing</h3><p data-content="services.items.5.description">Thoughtful digital campaigns to reach the right people and grow your presence.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">07</span>
+            <h3 data-content="services.items.6.title">AI & automation</h3><p data-content="services.items.6.description">Practical, purposeful automation that helps make everyday work flow better.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">08</span>
+            <h3 data-content="services.items.7.title">Custom software</h3><p data-content="services.items.7.description">Software solutions shaped around your business, your people, and your goals.</p>
+          </article>
+          <article class="service-card">
+            <span class="service-number">09</span>
+            <h3 data-content="services.items.8.title">Creative & advertising</h3><p data-content="services.items.8.description">Fresh creative, made to give your ideas a voice and a place in the world.</p>
+          </article>
+          <template>
+            <article class="service-card">
+              <span class="service-number" data-list-number></span>
+              <h3 data-list-text="title"></h3>
+              <p data-list-text="description"></p>
+            </article>
+          </template>
+        </div>
+      </section>
+
+      <section class="work-section" id="work">
+        <div class="section-wrap work-inner">
+          <div class="section-heading work-heading">
+            <div>
+              <p class="eyebrow" data-content="work.eyebrow">A few things we've made</p>
+              <h2><span data-content="work.titleFirst">Ideas, out in</span><br><span data-content="work.titleSecond">the world.</span></h2>
+            </div>
+            <p class="section-summary" data-content="work.summary">A glimpse of the visual worlds, digital products, and brand ideas our team loves bringing to life.</p>
+          </div>
+
+          <div class="work-grid" data-content-list="work.items">
+            <article class="work-card work-card-large">
+              <a class="work-image" href="assets/product-design-dashboard.jpg" data-content-href="work.items.0.image" data-content-aria-label="work.items.0.alt" target="_blank" rel="noreferrer" aria-label="View product design dashboard artwork">
+                <img src="assets/product-design-dashboard.jpg" alt="Interface and product design dashboard concept" data-content-image="work.items.0.image" data-content-alt="work.items.0.alt">
+              </a>
+              <div class="work-meta" data-content="work.items.0.category">PRODUCT DESIGN</div>
+              <h3 data-content="work.items.0.title">Interfaces with intention.</h3>
+              <button class="work-view-button" type="button">View project</button>
+            </article>
+            <article class="work-card">
+              <a class="work-image" href="assets/mobile-app.jpg" data-content-href="work.items.1.image" data-content-aria-label="work.items.1.alt" target="_blank" rel="noreferrer" aria-label="View mobile app design artwork">
+                <img src="assets/mobile-app.jpg" alt="Colorful mobile app and product design concept" data-content-image="work.items.1.image" data-content-alt="work.items.1.alt">
+              </a>
+              <div class="work-meta" data-content="work.items.1.category">MOBILE APP DESIGN</div>
+              <h3 data-content="work.items.1.title">A brighter everyday.</h3>
+              <button class="work-view-button" type="button">View project</button>
+            </article>
+            <article class="work-card">
+              <a class="work-image" href="assets/web-development.jpg" data-content-href="work.items.2.image" data-content-aria-label="work.items.2.alt" target="_blank" rel="noreferrer" aria-label="View website design artwork">
+                <img src="assets/web-development.jpg" alt="Website concept presented on a desktop screen" data-content-image="work.items.2.image" data-content-alt="work.items.2.alt">
+              </a>
+              <div class="work-meta" data-content="work.items.2.category">WEB DEVELOPMENT</div>
+              <h3 data-content="work.items.2.title">Websites built to move.</h3>
+              <button class="work-view-button" type="button">View project</button>
+            </article>
+            <article class="work-card">
+              <a class="work-image" href="assets/campaign-design.jpg" data-content-href="work.items.3.image" data-content-aria-label="work.items.3.alt" target="_blank" rel="noreferrer" aria-label="View graphic campaign artwork">
+                <img src="assets/campaign-design.jpg" alt="Bold black and green graphic design campaign" data-content-image="work.items.3.image" data-content-alt="work.items.3.alt">
+              </a>
+              <div class="work-meta" data-content="work.items.3.category">GRAPHIC DESIGN</div>
+              <h3 data-content="work.items.3.title">Made to make a mark.</h3>
+              <button class="work-view-button" type="button">View project</button>
+            </article>
+            <article class="work-card work-card-large">
+              <a class="work-image" href="assets/creative-motion.jpg" data-content-href="work.items.4.image" data-content-aria-label="work.items.4.alt" target="_blank" rel="noreferrer" aria-label="View creative and motion design artwork">
+                <img src="assets/creative-motion.jpg" alt="Vibrant orange creative direction and motion concept" data-content-image="work.items.4.image" data-content-alt="work.items.4.alt">
+              </a>
+              <div class="work-meta" data-content="work.items.4.category">CREATIVE & MOTION</div>
+              <h3 data-content="work.items.4.title">A little more feeling.</h3>
+              <button class="work-view-button" type="button">View project</button>
+            </article>
+            <article class="work-card">
+              <a class="work-image" href="assets/product-trust.jpg" data-content-href="work.items.5.image" data-content-aria-label="work.items.5.alt" target="_blank" rel="noreferrer" aria-label="View digital experience artwork">
+                <img src="assets/product-trust.jpg" alt="Digital trust and product experience concept" data-content-image="work.items.5.image" data-content-alt="work.items.5.alt">
+              </a>
+              <div class="work-meta" data-content="work.items.5.category">DIGITAL EXPERIENCES</div>
+              <h3 data-content="work.items.5.title">Built around people.</h3>
+              <button class="work-view-button" type="button">View project</button>
+            </article>
+            <template>
+              <article class="work-card">
+                <a class="work-image" data-list-href="image" data-list-aria-label="alt" target="_blank" rel="noreferrer" aria-label="Open project image">
+                  <img data-list-image="image" data-list-alt="alt" alt="">
+                </a>
+                <div class="work-meta" data-list-text="category"></div>
+                <h3 data-list-text="title"></h3>
+                <button class="work-view-button" type="button">View project</button>
+              </article>
+            </template>
+          </div>
+        </div>
+      </section>
+
+      <dialog class="work-viewer" id="work-viewer" aria-labelledby="work-viewer-title">
+        <div class="work-viewer-header">
+          <p class="work-viewer-category" id="work-viewer-category"></p>
+          <button class="work-viewer-close" id="close-work-viewer" type="button" aria-label="Close project viewer" autofocus>Close</button>
+        </div>
+        <div class="work-viewer-stage">
+          <button class="work-viewer-nav" id="previous-work" type="button" aria-label="Previous project">Previous</button>
+          <figure>
+            <img class="work-viewer-image" id="work-viewer-image" alt="">
+            <figcaption><h2 class="work-viewer-title" id="work-viewer-title"></h2></figcaption>
+          </figure>
+          <button class="work-viewer-nav" id="next-work" type="button" aria-label="Next project">Next</button>
+        </div>
+        <p class="work-viewer-count" id="work-viewer-count" aria-live="polite"></p>
+      </dialog>
+
+      <section class="about section-wrap" id="about">
+        <div class="about-panel">
+          <div class="about-visual">
+            <img src="assets/uiflowlabs-mark.png" alt="" class="about-mark" data-content-image="branding.logo">
+          </div>
+          <div class="about-copy">
+            <p class="eyebrow" data-content="about.eyebrow">A little about us</p>
+            <h2><span data-content="about.titleFirst">Creativity at the table.</span><br><span data-content="about.titleSecond">Technology in the toolkit.</span></h2>
+            <div class="about-paragraphs" data-content-list="about.paragraphs">
+              <p data-content="about.paragraphs.0">UIFlow Labs is a creative technology agency dedicated to turning ideas into meaningful digital experiences. We bring design, development, and strategic thinking together to help businesses build a stronger digital presence.</p>
+              <p data-content="about.paragraphs.1">From shaping memorable brand identities to building useful digital products, we care about quality, functionality, and the experience people have along the way. Every business has its own vision. Our job is to help bring it to life.</p>
+              <template><p data-list-value></p></template>
+            </div>
+            <a class="about-link" href="#contact">Tell us what you're imagining <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact-section section-wrap" id="contact">
+        <div class="contact-heading">
+          <p class="eyebrow"><span class="status-dot"></span> <span data-content="contact.eyebrow">Have a good one in mind?</span></p>
+          <h2><span data-content="contact.titleFirst">Let's make it</span><br><span data-content="contact.titleSecond">happen.</span></h2>
+          <a class="button button-light" href="mailto:info.uiflowlabs@gmail.com?subject=Let%27s%20work%20together" data-content-mailto="contact.email" data-content-mailto-subject="contact.emailSubject"><span data-content="contact.ctaText">Start a conversation</span> <span class="button-arrow" aria-hidden="true">↗</span></a>
+        </div>
+        <div class="contact-details">
+          <p data-content="contact.description">Have an idea, a challenge, or a project in mind? We'd love to hear what you're working on.</p>
+          <form class="contact-form" id="contact-form">
+            <label>
+              Your name
+              <input name="name" type="text" autocomplete="name" maxlength="100" required>
+            </label>
+            <label>
+              Email address
+              <input name="email" type="email" autocomplete="email" maxlength="254" required>
+            </label>
+            <label>
+              What can we help with?
+              <select name="service">
+                <option value="">Select a service (optional)</option>
+                <option value="UI/UX & product design">UI/UX &amp; product design</option>
+                <option value="Website development">Website development</option>
+                <option value="Mobile app development">Mobile app development</option>
+                <option value="Graphic design & branding">Graphic design &amp; branding</option>
+                <option value="Motion & video">Motion &amp; video</option>
+                <option value="Digital marketing">Digital marketing</option>
+                <option value="AI & automation">AI &amp; automation</option>
+                <option value="Custom software">Custom software</option>
+                <option value="Creative & advertising">Creative &amp; advertising</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            <label>
+              Tell us about your project
+              <textarea name="message" rows="4" maxlength="5000" required></textarea>
+            </label>
+            <button class="button button-light contact-submit" type="submit">
+              Send inquiry <span class="button-arrow" aria-hidden="true">↗</span>
+            </button>
+            <p class="form-status" id="contact-status" role="status" aria-live="polite"></p>
+          </form>
+          <a href="mailto:info.uiflowlabs@gmail.com" data-content-mailto="contact.email" data-content-mailto-subject="contact.emailSubject"><span>EMAIL</span><span data-content="contact.email">info.uiflowlabs@gmail.com</span> <span class="contact-arrow" aria-hidden="true">↗</span></a>
+          <div class="contact-locations"><span data-content="contact.locationsLabel">WORKING ACROSS</span><p data-content="contact.locations">UAE · Qatar · India</p></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-main">
+        <a class="brand footer-brand" href="#home" aria-label="UIFlow Labs home">
+          <img class="brand-mark" src="assets/uiflowlabs-mark.png" alt="" data-content-image="branding.logo">
+          <span class="brand-name"><span data-content="branding.brandNameFirst">UI FLOW</span> <span data-content="branding.brandNameSecond">LABS</span></span>
+        </a>
+        <p>Creative thinking.<br>Thoughtful technology.</p>
+        <a class="back-top" href="#home" aria-label="Back to top">↑</a>
+      </div>
+      <div class="footer-bottom"><span>© <span id="current-year">2026</span> UIFlow Labs. All rights reserved.</span><a href="https://uiflowlabs.in">uiflowlabs.in <span aria-hidden="true">↗</span></a></div>
+    </footer>
+  </body>
+</html>

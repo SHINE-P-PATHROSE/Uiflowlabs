@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Website editor — UIFlow Labs</title>
+    <link rel="icon" type="image/png" href="assets/uiflowlabs-mark.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="admin.css">
+    <script src="admin.js" defer></script>
+  </head>
+  <body class="admin-page">
+    <header class="admin-header">
+      <a class="brand" href="/" aria-label="UIFlow Labs home">
+        <img class="brand-mark" src="assets/uiflowlabs-mark.png" alt="">
+        <span class="brand-name">UI FLOW <span>LABS</span></span>
+      </a>
+      <div class="admin-header-actions">
+        <a href="/" class="admin-home-link">View website <span aria-hidden="true">↗</span></a>
+        <button class="admin-logout" id="logout-button" type="button" hidden>Sign out</button>
+      </div>
+    </header>
+
+    <main class="admin-shell">
+      <section class="admin-login admin-panel" id="login-panel">
+        <p class="eyebrow">Private workspace</p>
+        <h1>Sign in to edit your website.</h1>
+        <p class="admin-intro">Use the administrator credentials configured in your private <code>.env</code> file.</p>
+        <form id="login-form">
+          <label>
+            Username
+            <input name="username" type="text" autocomplete="username" required>
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="button button-dark" type="submit">Sign in</button>
+          <p class="admin-status" id="login-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-editor" id="editor-panel" hidden>
+        <div class="admin-title-row">
+          <div>
+            <p class="eyebrow">Content management</p>
+            <h1>Website editor</h1>
+            <p class="admin-intro">Edit text, images, colors, lists, links, and section settings. Add, remove, and reorder list items. Drafts auto-save after you pause; press Ctrl+S or Cmd+S to save now. Changes stay private until published.</p>
+            <p class="admin-field-hint">Browser spell-check and autocorrect suggestions are enabled for text fields.</p>
+          </div>
+          <p class="publish-state" id="publish-state" role="status" aria-live="polite">Loading content…</p>
+        </div>
+
+        <div class="admin-toolbar">
+          <button class="button button-outline" id="preview-button" type="button">Preview draft</button>
+          <button class="button button-outline" id="history-button" type="button">Version history</button>
+          <button class="button button-outline" id="discard-button" type="button">Discard draft</button>
+          <button class="button button-outline" id="save-button" type="button" aria-keyshortcuts="Control+S Meta+S">Save draft</button>
+          <button class="button button-dark" id="publish-button" type="button">Publish changes</button>
+        </div>
+        <p class="admin-status" id="editor-status" role="status" aria-live="polite"></p>
+        <div class="admin-search">
+          <label for="content-search">Find content</label>
+          <input id="content-search" type="search" placeholder="Search sections, field names, or text…" autocomplete="off" aria-describedby="search-status">
+          <p id="search-status" role="status" aria-live="polite"></p>
+        </div>
+
+        <section class="admin-history" id="history-panel" aria-labelledby="history-title" hidden>
+          <div class="preview-heading">
+            <div>
+              <h2 id="history-title">Published versions</h2>
+              <p>Preview a version or restore it to your draft. Restoring does not publish it.</p>
+            </div>
+            <button class="admin-logout" id="close-history" type="button">Close history</button>
+          </div>
+          <p class="admin-status" id="history-status" role="status" aria-live="polite"></p>
+          <div class="history-list" id="history-list"></div>
+        </section>
+
+        <div class="admin-preview" id="preview-panel" hidden>
+          <div class="preview-heading">
+            <div>
+              <h2>Draft preview</h2>
+              <p>This preview is private until you publish.</p>
+            </div>
+            <div class="preview-actions">
+              <div class="preview-size-controls" role="group" aria-label="Preview viewport size">
+                <button type="button" data-preview-size="desktop" aria-pressed="true">Desktop</button>
+                <button type="button" data-preview-size="tablet" aria-pressed="false">Tablet</button>
+                <button type="button" data-preview-size="mobile" aria-pressed="false">Mobile</button>
+              </div>
+              <button class="admin-logout" id="close-preview" type="button">Close preview</button>
+            </div>
+          </div>
+          <div class="admin-preview-viewport" id="preview-viewport" data-size="desktop">
+            <iframe id="preview-frame" title="Private preview of the website draft" src="about:blank"></iframe>
+          </div>
+        </div>
+
+        <div class="admin-fields" id="content-fields"></div>
+      </section>
+    </main>
+  </body>
+</html>
