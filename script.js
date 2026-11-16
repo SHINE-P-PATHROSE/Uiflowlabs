@@ -17,6 +17,7 @@ function renderContentLists(content) {
     const renderedItems = document.createDocumentFragment();
     items.forEach((item, index) => {
       const element = prototype.cloneNode(true);
+      element.hidden = item?.visible === false;
       if (list.dataset.contentList === "work.items") {
         element.classList.toggle("work-card-large", index === 0 || index === 4);
       }
@@ -92,10 +93,33 @@ function applySiteContent(content) {
     if (value === "left" || value === "center") element.dataset.alignment = value;
   }
 
+  for (const element of document.querySelectorAll("[data-content-visible]")) {
+    const value = getContentValue(content, element.dataset.contentVisible);
+    if (typeof value === "boolean") element.hidden = !value;
+  }
+
   for (const element of document.querySelectorAll("[data-content-aria-label]")) {
     const value = getContentValue(content, element.dataset.contentAriaLabel);
     if (typeof value === "string") element.setAttribute("aria-label", value);
   }
+
+  if (Array.isArray(content.layout?.homeSectionOrder)) {
+    const main = document.querySelector("main");
+    const sections = content.layout.homeSectionOrder
+      .map((id) => document.querySelector(`#${CSS.escape(id)}`))
+      .filter((element) => element instanceof HTMLElement && element.parentElement === main);
+    if (main && sections.length === content.layout.homeSectionOrder.length) main.append(...sections);
+  }
+
+  const isCareersPage = window.location.pathname.endsWith("/careers.html");
+  const pageTitle = isCareersPage ? content.careers.metaTitle : content.seo.title;
+  const pageDescription = isCareersPage ? content.careers.metaDescription : content.seo.description;
+  const pageImage = new URL(content.seo.image, window.location.href).href;
+  document.title = pageTitle;
+  document.querySelector('meta[name="description"]')?.setAttribute("content", pageDescription);
+  document.querySelector('meta[property="og:title"]')?.setAttribute("content", pageTitle);
+  document.querySelector('meta[property="og:description"]')?.setAttribute("content", pageDescription);
+  document.querySelector('meta[property="og:image"]')?.setAttribute("content", pageImage);
 
   const favicon = document.querySelector('link[rel="icon"]');
   if (favicon) favicon.href = content.branding.logo;
@@ -252,9 +276,10 @@ if (workViewer instanceof HTMLDialogElement) {
   const closeWorkViewer = document.querySelector("#close-work-viewer");
   let activeWorkIndex = 0;
   let lastWorkTrigger;
+  const getVisibleWorkCards = () => [...document.querySelectorAll(".work-card")].filter((card) => !card.hidden);
 
   function showWork(index) {
-    const workCards = [...document.querySelectorAll(".work-card")];
+    const workCards = getVisibleWorkCards();
     if (!workCards.length) return;
     activeWorkIndex = (index + workCards.length) % workCards.length;
     const card = workCards[activeWorkIndex];
@@ -277,7 +302,7 @@ if (workViewer instanceof HTMLDialogElement) {
     if (!(event.target instanceof Element)) return;
     const trigger = event.target.closest(".work-image, .work-view-button");
     if (!trigger || !workSection.contains(trigger)) return;
-    const cards = [...workSection.querySelectorAll(".work-card")];
+    const cards = getVisibleWorkCards();
     const index = cards.indexOf(trigger.closest(".work-card"));
     if (index < 0) return;
 

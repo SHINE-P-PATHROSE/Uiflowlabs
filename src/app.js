@@ -2,7 +2,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import multer from "multer";
@@ -14,6 +14,8 @@ const uploadsRoot = path.join(root, "uploads");
 const adminCookieName = "uiflowlabs_admin";
 const adminSessionDuration = 8 * 60 * 60;
 const siteContentHistoryLimit = 25;
+const inquiryPageSize = 25;
+const inquiryExportLimit = 1000;
 
 function parseContent(value) {
   return typeof value === "string" ? JSON.parse(value) : value;
@@ -23,6 +25,38 @@ function validateStoredSiteContent(value) {
   const validation = validateSiteContent(normalizeSiteContent(parseContent(value)));
   if (validation.error) throw new Error(`Stored website content is invalid: ${validation.error}`);
   return validation.value;
+}
+
+function contentUsesImage(value, imagePath) {
+  if (value === imagePath) return true;
+  if (Array.isArray(value)) return value.some((item) => contentUsesImage(item, imagePath));
+  if (value && typeof value === "object") {
+    return Object.values(value).some((item) => contentUsesImage(item, imagePath));
+  }
+  return false;
+}
+
+function isSupportedImage(filename) {
+  return /\.(png|jpe?g|webp)$/i.test(filename);
+}
+
+function getInquirySearch(request, response) {
+  const search = request.query.q ?? "";
+  if (typeof search !== "string" || search.length > 120) {
+    response.status(400).json({ error: "Search text must be 120 characters or fewer." });
+    return null;
+  }
+  return search.trim();
+}
+
+function inquirySearchClause() {
+  return "(? = '' OR LOCATE(LOWER(?), LOWER(CONCAT_WS(' ', name, email, service))) > 0)";
+}
+
+function csvCell(value) {
+  let text = value == null ? "" : String(value);
+  if (/^[\u0000-\u0020]*[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
 }
 
 function safeEqual(candidate, expected) {
@@ -127,7 +161,7 @@ export function createApp(pool, adminConfig = {}) {
     }
   }));
 
-  app.use("/api/admin/content", express.json({ limit: "100kb" }));
+  app.use(["/api/admin/content", "/api/admin/schedule"], express.json({ limit: "100kb" }));
   app.use(express.json({ limit: "10kb" }));
   app.use("/assets", express.static(path.join(root, "assets"), { dotfiles: "deny", index: false }));
   app.use("/uploads", express.static(uploadsRoot, { dotfiles: "deny", index: false }));
@@ -234,6 +268,207 @@ export function createApp(pool, adminConfig = {}) {
     });
   });
 
+  app.get("/api/admin/inquiries/export", requireAdmin, async (request, response) => {
+    const search = getInquirySearch(request, response);
+    if (search === null) return;
+    const searchParams = [search, search];
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM contact_messages WHERE ${inquirySearchClause()}`,
+      searchParams
+    );
+    const total = Number(countRows[0]?.total || 0);
+    if (total > inquiryExportLimit) {
+      response.status(413).json({
+        error: `There are ${total} matching inquiries. Narrow your search to export up to ${inquiryExportLimit} at a time.`
+      });
+      return;
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT id, name, email, service, message, created_at
+       FROM contact_messages
+       WHERE ${inquirySearchClause()}
+       ORDER BY id DESC
+       LIMIT ${inquiryExportLimit}`,
+      searchParams
+    );
+    const csvRows = [
+      ["ID", "Received", "Name", "Email", "Service", "Message"],
+      ...rows.map((row) => [
+        row.id,
+        row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
+        row.name,
+        row.email,
+        row.service,
+        row.message
+      ])
+    ];
+    const csv = `\uFEFF${csvRows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
+    response.set("Cache-Control", "no-store");
+    response.type("text/csv; charset=utf-8");
+    response.attachment(`uiflowlabs-inquiries-${new Date().toISOString().slice(0, 10)}.csv`);
+    response.send(csv);
+  });
+
+  app.get("/api/admin/inquiries", requireAdmin, async (request, response) => {
+    const search = getInquirySearch(request, response);
+    if (search === null) return;
+    const requestedPage = request.query.page === undefined ? 1 : Number(request.query.page);
+    if (!Number.isSafeInteger(requestedPage) || requestedPage < 1) {
+      response.status(400).json({ error: "Choose a valid inbox page." });
+      return;
+    }
+
+    const searchParams = [search, search];
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM contact_messages WHERE ${inquirySearchClause()}`,
+      searchParams
+    );
+    const total = Number(countRows[0]?.total || 0);
+    const pageCount = Math.max(1, Math.ceil(total / inquiryPageSize));
+    const page = Math.min(requestedPage, pageCount);
+    const offset = (page - 1) * inquiryPageSize;
+    const [rows] = await pool.execute(
+      `SELECT id, name, email, service, message, created_at
+       FROM contact_messages
+       WHERE ${inquirySearchClause()}
+       ORDER BY id DESC
+       LIMIT ${inquiryPageSize} OFFSET ?`,
+      [...searchParams, offset]
+    );
+    response.set("Cache-Control", "no-store");
+    response.json({
+      inquiries: rows.map((row) => ({
+        id: String(row.id),
+        name: row.name,
+        email: row.email,
+        service: row.service,
+        message: row.message,
+        createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString()
+      })),
+      pagination: { page, pageCount, total }
+    });
+  });
+
+  app.get("/api/admin/media", requireAdmin, async (_request, response) => {
+    const [assetFiles, uploadFiles] = await Promise.all([
+      readdir(path.join(root, "assets"), { withFileTypes: true }),
+      readdir(uploadsRoot, { withFileTypes: true }).catch((error) => {
+        if (error.code === "ENOENT") return [];
+        throw error;
+      })
+    ]);
+    const items = [
+      ...assetFiles.filter((file) => file.isFile() && isSupportedImage(file.name))
+        .map((file) => ({ filename: file.name, path: `assets/${file.name}`, source: "assets" })),
+      ...uploadFiles.filter((file) => file.isFile() && isSupportedImage(file.name))
+        .map((file) => ({ filename: file.name, path: `uploads/${file.name}`, source: "uploads" }))
+    ].sort((left, right) => left.path.localeCompare(right.path));
+    response.set("Cache-Control", "no-store");
+    response.json({ items });
+  });
+
+  app.delete("/api/admin/media/:filename", requireSameOrigin, requireAdmin, async (request, response) => {
+    const { filename } = request.params;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp)$/i.test(filename)) {
+      response.status(400).json({ error: "Only uploaded images can be removed." });
+      return;
+    }
+
+    const imagePath = `uploads/${filename}`;
+    const [contentRows] = await pool.execute(
+      "SELECT published_content, draft_content FROM site_content WHERE id = 1"
+    );
+    if (!contentRows.length) {
+      response.status(503).json({ error: "Website content is not initialized." });
+      return;
+    }
+    const referenced = contentRows.some((row) =>
+      contentUsesImage(parseContent(row.published_content), imagePath)
+      || contentUsesImage(parseContent(row.draft_content), imagePath)
+    );
+    if (referenced) {
+      response.status(409).json({ error: "This image is used by the current draft or published site and cannot be removed." });
+      return;
+    }
+
+    const [scheduledRows] = await pool.execute(
+      "SELECT content FROM site_content_schedule WHERE id = 1 AND content IS NOT NULL"
+    );
+    if (scheduledRows.some((row) => contentUsesImage(parseContent(row.content), imagePath))) {
+      response.status(409).json({ error: "This image is used by a scheduled publish and cannot be removed." });
+      return;
+    }
+
+    const [historyRows] = await pool.execute(
+      "SELECT content FROM site_content_history WHERE content LIKE ?",
+      [`%${imagePath}%`]
+    );
+    if (historyRows.some((row) => contentUsesImage(parseContent(row.content), imagePath))) {
+      response.status(409).json({ error: "This image is referenced by published history and cannot be removed." });
+      return;
+    }
+
+    try {
+      await unlink(path.join(uploadsRoot, filename));
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        response.status(404).json({ error: "That uploaded image could not be found." });
+        return;
+      }
+      throw error;
+    }
+    response.json({ removed: true });
+  });
+
+  app.get("/api/admin/schedule", requireAdmin, async (_request, response) => {
+    const [rows] = await pool.execute(
+      "SELECT publish_at_ms FROM site_content_schedule WHERE id = 1 AND content IS NOT NULL"
+    );
+    const publishAtMs = rows.length ? Number(rows[0].publish_at_ms) : null;
+    response.set("Cache-Control", "no-store");
+    response.json({
+      schedule: Number.isSafeInteger(publishAtMs) && publishAtMs > 0
+        ? { publishAt: new Date(publishAtMs).toISOString() }
+        : null
+    });
+  });
+
+  app.post("/api/admin/schedule", requireSameOrigin, requireAdmin, async (request, response) => {
+    const validation = validateSiteContent(request.body?.content);
+    if (validation.error) {
+      response.status(400).json({ error: validation.error });
+      return;
+    }
+
+    const publishAt = request.body?.publishAt;
+    const publishAtMs = typeof publishAt === "string" ? Date.parse(publishAt) : Number.NaN;
+    if (
+      !Number.isSafeInteger(publishAtMs)
+      || new Date(publishAtMs).toISOString() !== publishAt
+      || publishAtMs < Date.now() + 60_000
+      || publishAtMs > Date.now() + 365 * 24 * 60 * 60 * 1000
+    ) {
+      response.status(400).json({ error: "Choose a publish time at least one minute from now and within the next year." });
+      return;
+    }
+
+    await pool.execute(
+      `INSERT INTO site_content_schedule (id, content, publish_at_ms)
+       VALUES (1, ?, ?)
+       ON DUPLICATE KEY UPDATE content = VALUES(content), publish_at_ms = VALUES(publish_at_ms)`,
+      [JSON.stringify(validation.value), publishAtMs]
+    );
+    response.json({ schedule: { publishAt: new Date(publishAtMs).toISOString() } });
+  });
+
+  app.delete("/api/admin/schedule", requireSameOrigin, requireAdmin, async (_request, response) => {
+    await pool.execute(
+      "UPDATE site_content_schedule SET content = NULL, publish_at_ms = NULL WHERE id = 1"
+    );
+    response.json({ cancelled: true });
+  });
+
   app.post("/api/admin/history/:versionId/restore", requireSameOrigin, requireAdmin, async (request, response) => {
     const versionId = Number(request.params.versionId);
     if (!Number.isSafeInteger(versionId) || versionId < 1) {
@@ -301,6 +536,9 @@ export function createApp(pool, adminConfig = {}) {
       await connection.execute(
         "INSERT INTO site_content_history (content) VALUES (?)",
         [publishedContent]
+      );
+      await connection.execute(
+        "UPDATE site_content_schedule SET content = NULL, publish_at_ms = NULL WHERE id = 1"
       );
       await connection.commit();
       transactionStarted = false;

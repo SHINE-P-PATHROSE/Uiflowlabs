@@ -37,7 +37,7 @@ test("editable lists enforce their allowed size limits", () => {
   assert.match(validateSiteContent(tooFewStats).error, /between 1 and 6 items/i);
 
   const maximumStats = structuredClone(DEFAULT_SITE_CONTENT);
-  maximumStats.stats = Array.from({ length: 6 }, () => ({ value: "1+", label: "Projects" }));
+  maximumStats.stats = Array.from({ length: 6 }, () => ({ value: "1+", label: "Projects", visible: true }));
   assert.deepEqual(validateSiteContent(maximumStats).value.stats, maximumStats.stats);
 
   const tooManyServices = structuredClone(DEFAULT_SITE_CONTENT);
@@ -46,6 +46,20 @@ test("editable lists enforce their allowed size limits", () => {
   tooManyServices.services.items.push(structuredClone(tooManyServices.services.items[0]));
   tooManyServices.services.items.push(structuredClone(tooManyServices.services.items[0]));
   assert.match(validateSiteContent(tooManyServices).error, /between 1 and 12 items/i);
+});
+
+test("visibility, SEO, and homepage section order are validated", () => {
+  const invalidVisibility = structuredClone(DEFAULT_SITE_CONTENT);
+  invalidVisibility.visibility.work = "hidden";
+  assert.match(validateSiteContent(invalidVisibility).error, /must be enabled or disabled/i);
+
+  const invalidOrder = structuredClone(DEFAULT_SITE_CONTENT);
+  invalidOrder.layout.homeSectionOrder[1] = "unknown";
+  assert.match(validateSiteContent(invalidOrder).error, /each supported homepage section exactly once/i);
+
+  const invalidSeoImage = structuredClone(DEFAULT_SITE_CONTENT);
+  invalidSeoImage.seo.image = "../../secret.png";
+  assert.match(validateSiteContent(invalidSeoImage).error, /image/i);
 });
 
 test("section controls accept only supported CTA targets, alignment, and career email", () => {
@@ -64,13 +78,27 @@ test("section controls accept only supported CTA targets, alignment, and career 
 
 test("legacy saved content receives defaults for fields added by newer editor versions", () => {
   const legacyContent = structuredClone(DEFAULT_SITE_CONTENT);
+  delete legacyContent.seo;
+  delete legacyContent.visibility;
+  delete legacyContent.layout;
+  delete legacyContent.careers.metaTitle;
+  delete legacyContent.careers.metaDescription;
   delete legacyContent.branding.brandNameFirst;
   delete legacyContent.home.primaryCtaHref;
   delete legacyContent.intro.alignment;
   delete legacyContent.careers.applyEmail;
   delete legacyContent.contact.emailSubject;
+  delete legacyContent.stats[0].visible;
+  delete legacyContent.services.items[0].visible;
+  delete legacyContent.work.items[0].visible;
+  delete legacyContent.careers.areas[0].visible;
 
   const normalized = normalizeSiteContent(legacyContent);
+  assert.deepEqual(normalized.seo, DEFAULT_SITE_CONTENT.seo);
+  assert.deepEqual(normalized.visibility, DEFAULT_SITE_CONTENT.visibility);
+  assert.deepEqual(normalized.layout, DEFAULT_SITE_CONTENT.layout);
+  assert.equal(normalized.careers.metaTitle, DEFAULT_SITE_CONTENT.careers.metaTitle);
+  assert.equal(normalized.stats[0].visible, true);
   assert.equal(normalized.branding.brandNameFirst, DEFAULT_SITE_CONTENT.branding.brandNameFirst);
   assert.equal(normalized.home.primaryCtaHref, DEFAULT_SITE_CONTENT.home.primaryCtaHref);
   assert.equal(normalized.intro.alignment, DEFAULT_SITE_CONTENT.intro.alignment);

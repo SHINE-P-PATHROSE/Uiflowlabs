@@ -2,6 +2,7 @@ import "dotenv/config";
 import mysql from "mysql2/promise";
 import { createApp } from "./src/app.js";
 import { DEFAULT_SITE_CONTENT } from "./src/site-content.js";
+import { publishDueScheduledContent } from "./src/scheduled-publish.js";
 
 const port = Number(process.env.PORT || 3000);
 const requiredDatabaseSettings = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"];
@@ -103,6 +104,16 @@ try {
       INDEX idx_site_content_history_created_at (created_at)
     ) ENGINE=InnoDB
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS site_content_schedule (
+      id TINYINT UNSIGNED NOT NULL,
+      content JSON NULL,
+      publish_at_ms BIGINT UNSIGNED NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      CONSTRAINT chk_site_content_schedule_singleton CHECK (id = 1)
+    ) ENGINE=InnoDB
+  `);
   await pool.execute(`
     INSERT INTO site_content_history (content)
     SELECT published_content FROM site_content
@@ -111,6 +122,19 @@ try {
   if (!configuredAdminSettings.length) {
     console.warn("Admin editor disabled. Set its credentials in .env to enable /admin.");
   }
+  const runScheduledPublishing = async () => {
+    try {
+      const published = await publishDueScheduledContent(pool);
+      if (published) console.log("Scheduled website content was published.");
+    } catch (error) {
+      console.error("Scheduled website publishing failed:", error);
+    }
+  };
+  void runScheduledPublishing();
+  const scheduledPublishTimer = setInterval(() => {
+    void runScheduledPublishing();
+  }, 5000);
+  scheduledPublishTimer.unref();
   app.listen(port, () => {
     console.log(`UIFlow Labs server is running at http://localhost:${port}`);
   });

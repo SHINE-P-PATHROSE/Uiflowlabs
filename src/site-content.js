@@ -1,4 +1,24 @@
 export const DEFAULT_SITE_CONTENT = {
+  seo: {
+    title: "UIFlow Labs — Ideas into digital experiences",
+    description: "UIFlow Labs brings design, development, and strategy together to create meaningful digital experiences.",
+    image: "assets/uiflowlabs-mark.png"
+  },
+  visibility: {
+    homeHero: true,
+    stats: true,
+    intro: true,
+    services: true,
+    work: true,
+    about: true,
+    contact: true,
+    careersHero: true,
+    careersAreas: true,
+    careersContact: true
+  },
+  layout: {
+    homeSectionOrder: ["home", "stats", "intro", "services", "work", "about", "contact"]
+  },
   branding: {
     brandNameFirst: "UI FLOW",
     brandNameSecond: "LABS",
@@ -17,9 +37,9 @@ export const DEFAULT_SITE_CONTENT = {
     secondaryCtaHref: "#services"
   },
   stats: [
-    { value: "250+", label: "Project Completed" },
-    { value: "100+", label: "Happy Clients" },
-    { value: "1+", label: "Years Of Experience" }
+    { value: "250+", label: "Project Completed", visible: true },
+    { value: "100+", label: "Happy Clients", visible: true },
+    { value: "1+", label: "Years Of Experience", visible: true }
   ],
   intro: {
     kicker: "SMALL DETAILS. BIGGER PICTURE.",
@@ -33,15 +53,15 @@ export const DEFAULT_SITE_CONTENT = {
     titleSecond: "One creative team.",
     summary: "A creative technology agency for the whole journey: strategy, design, development, and everything that helps your business grow.",
     items: [
-      { title: "UI/UX & product design", description: "Clear, considered experiences built around the people who use them." },
-      { title: "Website development", description: "Fast, responsive websites that make a great first impression and keep working." },
-      { title: "Mobile app development", description: "Useful mobile experiences, designed for the way people really live." },
-      { title: "Graphic design & branding", description: "Distinctive identities and visual systems that help your brand feel like you." },
-      { title: "Motion & video", description: "Bring your message to life with motion, animation, and video production." },
-      { title: "Digital marketing", description: "Thoughtful digital campaigns to reach the right people and grow your presence." },
-      { title: "AI & automation", description: "Practical, purposeful automation that helps make everyday work flow better." },
-      { title: "Custom software", description: "Software solutions shaped around your business, your people, and your goals." },
-      { title: "Creative & advertising", description: "Fresh creative, made to give your ideas a voice and a place in the world." }
+      { title: "UI/UX & product design", description: "Clear, considered experiences built around the people who use them.", visible: true },
+      { title: "Website development", description: "Fast, responsive websites that make a great first impression and keep working.", visible: true },
+      { title: "Mobile app development", description: "Useful mobile experiences, designed for the way people really live.", visible: true },
+      { title: "Graphic design & branding", description: "Distinctive identities and visual systems that help your brand feel like you.", visible: true },
+      { title: "Motion & video", description: "Bring your message to life with motion, animation, and video production.", visible: true },
+      { title: "Digital marketing", description: "Thoughtful digital campaigns to reach the right people and grow your presence.", visible: true },
+      { title: "AI & automation", description: "Practical, purposeful automation that helps make everyday work flow better.", visible: true },
+      { title: "Custom software", description: "Software solutions shaped around your business, your people, and your goals.", visible: true },
+      { title: "Creative & advertising", description: "Fresh creative, made to give your ideas a voice and a place in the world.", visible: true }
     ]
   },
   work: {
@@ -50,12 +70,12 @@ export const DEFAULT_SITE_CONTENT = {
     titleSecond: "the world.",
     summary: "A glimpse of the visual worlds, digital products, and brand ideas our team loves bringing to life.",
     items: [
-      { category: "PRODUCT DESIGN", title: "Interfaces with intention.", image: "assets/product-design-dashboard.jpg", alt: "Interface and product design dashboard concept" },
-      { category: "MOBILE APP DESIGN", title: "A brighter everyday.", image: "assets/mobile-app.jpg", alt: "Colorful mobile app and product design concept" },
-      { category: "WEB DEVELOPMENT", title: "Websites built to move.", image: "assets/web-development.jpg", alt: "Website concept presented on a desktop screen" },
-      { category: "GRAPHIC DESIGN", title: "Made to make a mark.", image: "assets/campaign-design.jpg", alt: "Bold black and green graphic design campaign" },
-      { category: "CREATIVE & MOTION", title: "A little more feeling.", image: "assets/creative-motion.jpg", alt: "Vibrant orange creative direction and motion concept" },
-      { category: "DIGITAL EXPERIENCES", title: "Built around people.", image: "assets/product-trust.jpg", alt: "Digital trust and product experience concept" }
+      { category: "PRODUCT DESIGN", title: "Interfaces with intention.", image: "assets/product-design-dashboard.jpg", alt: "Interface and product design dashboard concept", visible: true },
+      { category: "MOBILE APP DESIGN", title: "A brighter everyday.", image: "assets/mobile-app.jpg", alt: "Colorful mobile app and product design concept", visible: true },
+      { category: "WEB DEVELOPMENT", title: "Websites built to move.", image: "assets/web-development.jpg", alt: "Website concept presented on a desktop screen", visible: true },
+      { category: "GRAPHIC DESIGN", title: "Made to make a mark.", image: "assets/campaign-design.jpg", alt: "Bold black and green graphic design campaign", visible: true },
+      { category: "CREATIVE & MOTION", title: "A little more feeling.", image: "assets/creative-motion.jpg", alt: "Vibrant orange creative direction and motion concept", visible: true },
+      { category: "DIGITAL EXPERIENCES", title: "Built around people.", image: "assets/product-trust.jpg", alt: "Digital trust and product experience concept", visible: true }
     ]
   },
   about: {
@@ -68,6 +88,8 @@ export const DEFAULT_SITE_CONTENT = {
     ]
   },
   careers: {
+    metaTitle: "Careers — UIFlow Labs",
+    metaDescription: "Explore careers at UIFlow Labs and introduce yourself to our creative technology team.",
     eyebrow: "Careers at UIFlow Labs",
     titleFirst: "Make good ideas",
     titleSecond: "happen.",
@@ -84,9 +106,9 @@ export const DEFAULT_SITE_CONTENT = {
     applyEmail: "info.uiflowlabs@gmail.com",
     emailSubject: "Careers at UIFlow Labs",
     areas: [
-      { title: "Design & product", description: "Shape clear, thoughtful interfaces, digital products, and brand experiences." },
-      { title: "Engineering & technology", description: "Build websites, mobile apps, custom software, and practical automation." },
-      { title: "Creative & growth", description: "Bring ideas to life through visual storytelling, motion, campaigns, and marketing." }
+      { title: "Design & product", description: "Shape clear, thoughtful interfaces, digital products, and brand experiences.", visible: true },
+      { title: "Engineering & technology", description: "Build websites, mobile apps, custom software, and practical automation.", visible: true },
+      { title: "Creative & growth", description: "Bring ideas to life through visual storytelling, motion, campaigns, and marketing.", visible: true }
     ]
   },
   contact: {
@@ -107,10 +129,12 @@ const arrayLimits = {
   "content.services.items": { min: 1, max: 12 },
   "content.work.items": { min: 1, max: 24 },
   "content.about.paragraphs": { min: 1, max: 8 },
-  "content.careers.areas": { min: 1, max: 12 }
+  "content.careers.areas": { min: 1, max: 12 },
+  "content.layout.homeSectionOrder": { min: 7, max: 7 }
 };
 
 const homeCtaTargets = new Set(["#work", "#services", "#contact"]);
+const homeSectionIds = new Set(DEFAULT_SITE_CONTENT.layout.homeSectionOrder);
 
 export function normalizeSiteContent(value, shape = DEFAULT_SITE_CONTENT) {
   if (Array.isArray(shape)) {
@@ -133,10 +157,17 @@ export function normalizeSiteContent(value, shape = DEFAULT_SITE_CONTENT) {
 }
 
 function validateValue(value, shape, path) {
+  if (typeof shape === "boolean") {
+    return typeof value === "boolean" ? { value } : { error: `${path} must be enabled or disabled.` };
+  }
+
   if (typeof shape === "string") {
     if (typeof value !== "string") return { error: `${path} must be text.` };
     const trimmed = value.trim();
-    const maxLength = path.endsWith(".alt") ? 300 : path.endsWith("emailSubject") ? 120 : 1500;
+    const maxLength = path.endsWith(".alt") ? 300
+      : path.endsWith("emailSubject") ? 120
+        : path.endsWith("metaDescription") || path.endsWith("seo.description") ? 320
+          : 1500;
     if (trimmed.length > maxLength) return { error: `${path} must be ${maxLength} characters or fewer.` };
     if (!trimmed && !path.endsWith(".alt")) return { error: `${path} cannot be empty.` };
 
@@ -178,6 +209,12 @@ function validateValue(value, shape, path) {
     const maxItems = limits?.max ?? shape.length;
     if (!Array.isArray(value) || value.length < minItems || value.length > maxItems) {
       return { error: `${path} must contain between ${minItems} and ${maxItems} items.` };
+    }
+    if (
+      path === "content.layout.homeSectionOrder"
+      && (new Set(value).size !== homeSectionIds.size || value.some((item) => !homeSectionIds.has(item)))
+    ) {
+      return { error: `${path} must contain each supported homepage section exactly once.` };
     }
 
     const result = [];

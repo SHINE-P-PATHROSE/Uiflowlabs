@@ -47,7 +47,7 @@
           <div>
             <p class="eyebrow">Content management</p>
             <h1>Website editor</h1>
-            <p class="admin-intro">Edit text, images, colors, lists, links, and section settings. Add, remove, and reorder list items. Drafts auto-save after you pause; press Ctrl+S or Cmd+S to save now. Changes stay private until published.</p>
+            <p class="admin-intro">Edit content, SEO, visibility, layout, and media. Add, duplicate, hide, reorder, or undo list changes. Drafts auto-save; review changes before publishing now or scheduling a future publish.</p>
             <p class="admin-field-hint">Browser spell-check and autocorrect suggestions are enabled for text fields.</p>
           </div>
           <p class="publish-state" id="publish-state" role="status" aria-live="polite">Loading content…</p>
@@ -56,6 +56,11 @@
         <div class="admin-toolbar">
           <button class="button button-outline" id="preview-button" type="button">Preview draft</button>
           <button class="button button-outline" id="history-button" type="button">Version history</button>
+          <button class="button button-outline" id="inquiries-button" type="button">Inquiry inbox</button>
+          <button class="button button-outline" id="media-button" type="button">Media library</button>
+          <button class="button button-outline" id="schedule-button" type="button">Schedule publish</button>
+          <button class="button button-outline" id="undo-button" type="button" aria-keyshortcuts="Control+Z Meta+Z" disabled>Undo</button>
+          <button class="button button-outline" id="redo-button" type="button" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z" disabled>Redo</button>
           <button class="button button-outline" id="discard-button" type="button">Discard draft</button>
           <button class="button button-outline" id="save-button" type="button" aria-keyshortcuts="Control+S Meta+S">Save draft</button>
           <button class="button button-dark" id="publish-button" type="button">Publish changes</button>
@@ -78,6 +83,77 @@
           <p class="admin-status" id="history-status" role="status" aria-live="polite"></p>
           <div class="history-list" id="history-list"></div>
         </section>
+
+        <section class="admin-inquiries" id="inquiries-panel" aria-labelledby="inquiries-title" hidden>
+          <div class="preview-heading">
+            <div>
+              <h2 id="inquiries-title">Inquiry inbox</h2>
+              <p>Contact messages are private to administrators. Search by name, email, or service, or export the filtered results.</p>
+            </div>
+            <button class="admin-logout" id="close-inquiries" type="button">Close inbox</button>
+          </div>
+          <form class="inquiry-toolbar" id="inquiry-search-form">
+            <label for="inquiry-search">Search inquiries</label>
+            <input id="inquiry-search" name="q" type="search" maxlength="120" placeholder="Name, email, or service…" autocomplete="off">
+            <button class="button button-outline" type="submit">Search</button>
+            <button class="button button-outline" id="export-inquiries" type="button">Export CSV</button>
+          </form>
+          <p class="admin-status" id="inquiry-status" role="status" aria-live="polite"></p>
+          <div class="inquiry-list" id="inquiry-list"></div>
+          <div class="inquiry-pagination">
+            <button class="admin-logout" id="previous-inquiries" type="button" disabled>Previous</button>
+            <p id="inquiry-page" role="status" aria-live="polite"></p>
+            <button class="admin-logout" id="next-inquiries" type="button" disabled>Next</button>
+          </div>
+        </section>
+
+        <dialog class="publish-summary" id="publish-summary" aria-labelledby="publish-summary-title">
+          <div class="preview-heading">
+            <div>
+              <h2 id="publish-summary-title">Review changes before publishing</h2>
+              <p id="publish-summary-description">Review the changes that will become public.</p>
+            </div>
+          </div>
+          <ul class="publish-change-list" id="publish-change-list"></ul>
+          <div class="publish-summary-actions">
+            <button class="button button-outline" id="cancel-publish" type="button">Keep editing</button>
+            <button class="button button-dark" id="confirm-publish" type="button">Publish changes</button>
+          </div>
+        </dialog>
+
+        <dialog class="publish-summary schedule-dialog" id="schedule-dialog" aria-labelledby="schedule-title">
+          <div class="preview-heading">
+            <div>
+              <h2 id="schedule-title">Schedule a publish</h2>
+              <p id="schedule-current" role="status">No publish is scheduled.</p>
+            </div>
+          </div>
+          <label class="schedule-field" for="schedule-at">
+            Publish date and time (your local time)
+            <input id="schedule-at" type="datetime-local" required>
+          </label>
+          <p class="admin-status" id="schedule-status" role="status" aria-live="polite"></p>
+          <ul class="publish-change-list" id="schedule-change-list"></ul>
+          <div class="publish-summary-actions">
+            <button class="button button-outline" id="cancel-schedule" type="button">Close</button>
+            <button class="button button-outline" id="remove-schedule" type="button" hidden>Cancel scheduled publish</button>
+            <button class="button button-dark" id="confirm-schedule" type="button">Schedule these changes</button>
+          </div>
+        </dialog>
+
+        <dialog class="publish-summary media-dialog" id="media-dialog" aria-labelledby="media-title">
+          <div class="preview-heading">
+            <div>
+              <h2 id="media-title">Media library</h2>
+              <p>Select an image to use it in the current image field. Remove unused uploads here.</p>
+            </div>
+          </div>
+          <p class="admin-status" id="media-status" role="status" aria-live="polite"></p>
+          <div class="media-grid" id="media-grid"></div>
+          <div class="publish-summary-actions">
+            <button class="button button-outline" id="close-media" type="button">Close library</button>
+          </div>
+        </dialog>
 
         <div class="admin-preview" id="preview-panel" hidden>
           <div class="preview-heading">

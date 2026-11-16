@@ -32,3 +32,12 @@ CREATE TABLE IF NOT EXISTS site_content_history (
   PRIMARY KEY (id),
   INDEX idx_site_content_history_created_at (created_at)
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS site_content_schedule (
+  id TINYINT UNSIGNED NOT NULL,
+  content JSON NULL,
+  publish_at_ms BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT chk_site_content_schedule_singleton CHECK (id = 1)
+) ENGINE=InnoDB;

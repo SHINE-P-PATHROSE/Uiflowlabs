@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#ffffff">
     <meta name="description" content="UIFlow Labs is a creative technology agency building brands, digital products, websites, and custom software for what's next.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="UIFlow Labs — Ideas into digital experiences">
+    <meta property="og:description" content="UIFlow Labs brings design, development, and strategy together to create meaningful digital experiences.">
+    <meta property="og:image" content="assets/uiflowlabs-mark.png">
+    <meta name="twitter:card" content="summary_large_image">
     <title>UIFlow Labs — Ideas into digital experiences</title>
     <link rel="icon" type="image/png" href="assets/uiflowlabs-mark.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,7 +45,7 @@
     </header>
 
     <main>
-      <section class="hero section-wrap" id="home">
+      <section class="hero section-wrap" id="home" data-content-visible="visibility.homeHero">
         <div class="hero-copy">
           <h1><span class="hero-title-desktop"><span data-content="home.desktopTitleFirst">Ideas Into Digital</span><br><span data-content="home.desktopTitleSecond">Impact</span></span><span class="hero-title-mobile"><span data-content="home.mobileTitleFirst">Ideas Into</span><br><span data-content="home.mobileTitleSecond">Digital Impact</span></span></h1>
           <div class="hero-actions">
@@ -54,7 +59,7 @@
         </div>
       </section>
 
-      <section class="stats-band" aria-label="UIFlow Labs at a glance">
+      <section class="stats-band" id="stats" data-content-visible="visibility.stats" aria-label="UIFlow Labs at a glance">
         <div class="stats-grid" data-content-list="stats">
           <div class="stat">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 8.2 4.6v9.2L12 21.2l-8.2-4.6V7.4L12 2.8Z"/><path d="m3.8 7.4 8.2 4.7 8.2-4.7M12 12.1v9"/></svg>
@@ -81,14 +86,14 @@
         </div>
       </section>
 
-      <section class="intro-band" aria-label="Our approach">
+      <section class="intro-band" id="intro" data-content-visible="visibility.intro" aria-label="Our approach">
         <div class="intro-inner section-wrap" data-content-align="intro.alignment">
           <p class="intro-kicker" data-content="intro.kicker">SMALL DETAILS. BIGGER PICTURE.</p>
           <p><span data-content="intro.startText">Good ideas deserve</span> <em data-content="intro.highlightText">great execution.</em></p>
         </div>
       </section>
 
-      <section class="services section-wrap" id="services">
+      <section class="services section-wrap" id="services" data-content-visible="visibility.services">
         <div class="section-heading">
           <div>
             <p class="eyebrow" data-content="services.eyebrow">From first sketch to what's next</p>
@@ -144,7 +149,7 @@
         </div>
       </section>
 
-      <section class="work-section" id="work">
+      <section class="work-section" id="work" data-content-visible="visibility.work">
         <div class="section-wrap work-inner">
           <div class="section-heading work-heading">
             <div>
@@ -233,7 +238,7 @@
         <p class="work-viewer-count" id="work-viewer-count" aria-live="polite"></p>
       </dialog>
 
-      <section class="about section-wrap" id="about">
+      <section class="about section-wrap" id="about" data-content-visible="visibility.about">
         <div class="about-panel">
           <div class="about-visual">
             <img src="assets/uiflowlabs-mark.png" alt="" class="about-mark" data-content-image="branding.logo">
@@ -251,7 +256,7 @@
         </div>
       </section>
 
-      <section class="contact-section section-wrap" id="contact">
+      <section class="contact-section section-wrap" id="contact" data-content-visible="visibility.contact">
         <div class="contact-heading">
           <p class="eyebrow"><span class="status-dot"></span> <span data-content="contact.eyebrow">Have a good one in mind?</span></p>
           <h2><span data-content="contact.titleFirst">Let's make it</span><br><span data-content="contact.titleSecond">happen.</span></h2>

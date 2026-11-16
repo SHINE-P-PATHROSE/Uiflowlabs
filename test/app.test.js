@@ -132,6 +132,9 @@ test("admin content requires sign-in and keeps drafts unpublished until publish"
             });
             return [{ insertId: history[0].id }, []];
           }
+          if (query.startsWith("UPDATE site_content_schedule SET content = NULL")) {
+            return [{ affectedRows: 1 }, []];
+          }
           throw new Error(`Unexpected transaction query: ${query}`);
         }
       };
@@ -239,6 +242,192 @@ test("admin content requires sign-in and keeps drafts unpublished until publish"
       body: "{}"
     });
     assert.equal(missingVersion.status, 404);
+  }, adminConfig);
+});
+
+test("admin can schedule, inspect, and cancel a future publish", async () => {
+  let schedule = null;
+  const pool = {
+    async execute(query, values = []) {
+      if (query.startsWith("SELECT publish_at_ms FROM site_content_schedule")) {
+        return [schedule ? [{ publish_at_ms: schedule.publishAtMs }] : [], []];
+      }
+      if (query.startsWith("INSERT INTO site_content_schedule")) {
+        schedule = { content: JSON.parse(values[0]), publishAtMs: values[1] };
+        return [{ affectedRows: 1 }, []];
+      }
+      if (query.startsWith("UPDATE site_content_schedule SET content = NULL")) {
+        schedule = null;
+        return [{ affectedRows: 1 }, []];
+      }
+      throw new Error(`Unexpected query: ${query}`);
+    }
+  };
+  const adminConfig = {
+    username: "site-admin",
+    password: "a-strong-password-123",
+    sessionSecret: "a-secure-session-secret-that-is-at-least-32-bytes"
+  };
+
+  await withServer(pool, async (baseUrl) => {
+    const login = await fetch(`${baseUrl}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: baseUrl },
+      body: JSON.stringify({ username: adminConfig.username, password: adminConfig.password })
+    });
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const headers = {
+      "Content-Type": "application/json",
+      Origin: baseUrl,
+      Cookie: cookie
+    };
+
+    const initial = await fetch(`${baseUrl}/api/admin/schedule`, { headers: { Cookie: cookie } });
+    assert.deepEqual((await initial.json()).schedule, null);
+
+    const publishAt = new Date(Date.now() + 2 * 60_000).toISOString();
+    const scheduled = await fetch(`${baseUrl}/api/admin/schedule`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ content: DEFAULT_SITE_CONTENT, publishAt })
+    });
+    assert.equal(scheduled.status, 200);
+    assert.equal((await scheduled.json()).schedule.publishAt, publishAt);
+
+    const invalidSchedule = await fetch(`${baseUrl}/api/admin/schedule`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        content: DEFAULT_SITE_CONTENT,
+        publishAt: new Date(Date.now() + 10_000).toISOString()
+      })
+    });
+    assert.equal(invalidSchedule.status, 400);
+
+    const cancelled = await fetch(`${baseUrl}/api/admin/schedule`, {
+      method: "DELETE",
+      headers: { Origin: baseUrl, Cookie: cookie }
+    });
+    assert.equal(cancelled.status, 200);
+    const afterCancel = await fetch(`${baseUrl}/api/admin/schedule`, { headers: { Cookie: cookie } });
+    assert.deepEqual((await afterCancel.json()).schedule, null);
+  }, adminConfig);
+});
+
+test("admin media library lists images and refuses to remove an in-use upload", async () => {
+  const imagePath = "uploads/11111111-2222-4333-8444-555555555555.png";
+  const published = structuredClone(DEFAULT_SITE_CONTENT);
+  published.work.items[0].image = imagePath;
+  const pool = {
+    async execute(query) {
+      if (query.startsWith("SELECT published_content, draft_content FROM site_content")) {
+        return [[{
+          published_content: JSON.stringify(published),
+          draft_content: JSON.stringify(published)
+        }], []];
+      }
+      if (query.startsWith("SELECT content FROM site_content_schedule")) return [[], []];
+      if (query.startsWith("SELECT content FROM site_content_history")) return [[], []];
+      throw new Error(`Unexpected query: ${query}`);
+    }
+  };
+  const adminConfig = {
+    username: "site-admin",
+    password: "a-strong-password-123",
+    sessionSecret: "a-secure-session-secret-that-is-at-least-32-bytes"
+  };
+
+  await withServer(pool, async (baseUrl) => {
+    const login = await fetch(`${baseUrl}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: baseUrl },
+      body: JSON.stringify({ username: adminConfig.username, password: adminConfig.password })
+    });
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const library = await fetch(`${baseUrl}/api/admin/media`, {
+      headers: { Cookie: cookie }
+    });
+    assert.equal(library.status, 200);
+    const items = (await library.json()).items;
+    assert.ok(items.some((item) => item.path === "assets/product-design-dashboard.jpg"));
+
+    const removed = await fetch(`${baseUrl}/api/admin/media/${imagePath.split("/")[1]}`, {
+      method: "DELETE",
+      headers: { Origin: baseUrl, Cookie: cookie }
+    });
+    assert.equal(removed.status, 409);
+  }, adminConfig);
+});
+
+test("admin inquiry inbox is protected, searchable, paginated, and exports safe CSV", async () => {
+  const inquiries = Array.from({ length: 30 }, (_, index) => ({
+    id: index + 1,
+    name: index === 29 ? "=formula,cmd" : index === 6 ? "Needle client" : `Client ${index + 1}`,
+    email: `client${index + 1}@example.com`,
+    service: index === 6 ? "Website development" : "Other",
+    message: `Project inquiry ${index + 1}`,
+    created_at: new Date(`2026-01-${String((index % 28) + 1).padStart(2, "0")}T12:00:00.000Z`)
+  }));
+  const pool = {
+    async execute(query, values = []) {
+      if (query.startsWith("SELECT COUNT(*) AS total FROM contact_messages")) {
+        const [search] = values;
+        const matching = inquiries.filter((item) =>
+          `${item.name} ${item.email} ${item.service}`.toLowerCase().includes(search.toLowerCase())
+        );
+        return [[{ total: matching.length }], []];
+      }
+      if (query.includes("FROM contact_messages") && query.includes("ORDER BY id DESC")) {
+        const [search] = values;
+        const matching = inquiries.filter((item) =>
+          `${item.name} ${item.email} ${item.service}`.toLowerCase().includes(search.toLowerCase())
+        ).sort((left, right) => right.id - left.id);
+        const offset = query.includes("OFFSET ?") ? Number(values[2]) : 0;
+        const limit = query.includes("OFFSET ?") ? 25 : 1000;
+        return [matching.slice(offset, offset + limit), []];
+      }
+      throw new Error(`Unexpected query: ${query}`);
+    }
+  };
+  const adminConfig = {
+    username: "site-admin",
+    password: "a-strong-password-123",
+    sessionSecret: "a-secure-session-secret-that-is-at-least-32-bytes"
+  };
+
+  await withServer(pool, async (baseUrl) => {
+    const unauthorized = await fetch(`${baseUrl}/api/admin/inquiries`);
+    assert.equal(unauthorized.status, 401);
+
+    const login = await fetch(`${baseUrl}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: baseUrl },
+      body: JSON.stringify({ username: adminConfig.username, password: adminConfig.password })
+    });
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const headers = { Cookie: cookie };
+
+    const firstPage = await fetch(`${baseUrl}/api/admin/inquiries?page=1`, { headers });
+    const firstPageData = await firstPage.json();
+    assert.equal(firstPageData.pagination.total, 30);
+    assert.equal(firstPageData.inquiries.length, 25);
+    assert.equal(firstPageData.inquiries[0].id, "30");
+
+    const secondPage = await fetch(`${baseUrl}/api/admin/inquiries?page=2`, { headers });
+    const secondPageData = await secondPage.json();
+    assert.equal(secondPageData.inquiries.length, 5);
+    assert.equal(secondPageData.inquiries[0].id, "5");
+
+    const search = await fetch(`${baseUrl}/api/admin/inquiries?q=needle`, { headers });
+    const searchData = await search.json();
+    assert.equal(searchData.pagination.total, 1);
+    assert.equal(searchData.inquiries[0].service, "Website development");
+
+    const exportResponse = await fetch(`${baseUrl}/api/admin/inquiries/export?q=formula`, { headers });
+    assert.equal(exportResponse.status, 200);
+    const csv = await exportResponse.text();
+    assert.match(csv, /"'\=formula,cmd"/);
+    assert.match(exportResponse.headers.get("content-disposition"), /attachment/);
   }, adminConfig);
 });
 
