@@ -88,13 +88,21 @@
           <div class="preview-heading">
             <div>
               <h2 id="inquiries-title">Inquiry inbox</h2>
-              <p>Contact messages are private to administrators. Search by name, email, or service, or export the filtered results.</p>
+              <p>Track each lead through follow-up. Status, notes, and follow-up dates are private to administrators.</p>
             </div>
             <button class="admin-logout" id="close-inquiries" type="button">Close inbox</button>
           </div>
+          <p class="inquiry-new-count" id="inquiry-new-count" role="status" aria-live="polite">New inquiries: 0</p>
           <form class="inquiry-toolbar" id="inquiry-search-form">
             <label for="inquiry-search">Search inquiries</label>
             <input id="inquiry-search" name="q" type="search" maxlength="120" placeholder="Name, email, or service…" autocomplete="off">
+            <select id="inquiry-status-filter" aria-label="Filter inquiries by status">
+              <option value="all">All statuses</option>
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="in_progress">In progress</option>
+              <option value="closed">Closed</option>
+            </select>
             <button class="button button-outline" type="submit">Search</button>
             <button class="button button-outline" id="export-inquiries" type="button">Export CSV</button>
           </form>

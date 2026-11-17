@@ -15,6 +15,8 @@ const inquiriesPanel = document.querySelector("#inquiries-panel");
 const inquiryList = document.querySelector("#inquiry-list");
 const inquiryStatus = document.querySelector("#inquiry-status");
 const inquirySearch = document.querySelector("#inquiry-search");
+const inquiryStatusFilter = document.querySelector("#inquiry-status-filter");
+const inquiryNewCount = document.querySelector("#inquiry-new-count");
 const inquiryPageLabel = document.querySelector("#inquiry-page");
 const previousInquiriesButton = document.querySelector("#previous-inquiries");
 const nextInquiriesButton = document.querySelector("#next-inquiries");
@@ -848,13 +850,20 @@ function renderInquiries(inquiries) {
     card.className = "inquiry-card";
     const header = document.createElement("div");
     header.className = "inquiry-card-header";
+    const heading = document.createElement("div");
+    heading.className = "inquiry-card-heading";
     const name = document.createElement("h3");
     name.textContent = inquiry.name;
+    const badge = document.createElement("span");
+    badge.className = "inquiry-status-badge";
+    badge.dataset.status = inquiry.status;
+    badge.textContent = inquiry.status.replace("_", " ");
     const received = document.createElement("time");
     const date = new Date(inquiry.createdAt);
     received.textContent = Number.isNaN(date.getTime()) ? inquiry.createdAt : date.toLocaleString();
     if (!Number.isNaN(date.getTime())) received.dateTime = date.toISOString();
-    header.append(name, received);
+    heading.append(name, badge);
+    header.append(heading, received);
 
     const contact = document.createElement("div");
     contact.className = "inquiry-contact";
@@ -871,7 +880,83 @@ function renderInquiries(inquiries) {
     const message = document.createElement("p");
     message.className = "inquiry-message";
     message.textContent = inquiry.message;
-    card.append(header, contact, message);
+
+    const trackingForm = document.createElement("form");
+    trackingForm.className = "inquiry-tracking";
+    const statusLabel = document.createElement("label");
+    statusLabel.textContent = "Lead status";
+    const statusSelect = document.createElement("select");
+    for (const [value, label] of [
+      ["new", "New"],
+      ["contacted", "Contacted"],
+      ["in_progress", "In progress"],
+      ["closed", "Closed"]
+    ]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      statusSelect.append(option);
+    }
+    statusSelect.value = inquiry.status || "new";
+    statusLabel.append(statusSelect);
+
+    const followUpLabel = document.createElement("label");
+    followUpLabel.textContent = "Follow-up date";
+    const followUpInput = document.createElement("input");
+    followUpInput.type = "date";
+    followUpInput.value = inquiry.followUpDate || "";
+    followUpLabel.append(followUpInput);
+
+    const notesLabel = document.createElement("label");
+    notesLabel.className = "inquiry-notes-field";
+    notesLabel.textContent = "Private notes";
+    const notesInput = document.createElement("textarea");
+    notesInput.maxLength = 2000;
+    notesInput.value = inquiry.notes || "";
+    notesInput.placeholder = "Add internal follow-up notes…";
+    notesLabel.append(notesInput);
+
+    const saveTrackingButton = document.createElement("button");
+    saveTrackingButton.type = "submit";
+    saveTrackingButton.textContent = "Save follow-up";
+    const trackingStatus = document.createElement("p");
+    trackingStatus.className = "inquiry-tracking-status";
+    trackingStatus.setAttribute("role", "status");
+    trackingStatus.setAttribute("aria-live", "polite");
+    trackingForm.append(statusLabel, followUpLabel, notesLabel, saveTrackingButton, trackingStatus);
+    trackingForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      saveTrackingButton.disabled = true;
+      trackingStatus.textContent = "Saving…";
+      trackingStatus.dataset.state = "";
+      try {
+        const result = await request(`/api/admin/inquiries/${encodeURIComponent(inquiry.id)}/tracking`, {
+          method: "PUT",
+          body: JSON.stringify({
+            status: statusSelect.value,
+            notes: notesInput.value,
+            followUpDate: followUpInput.value || null
+          })
+        });
+        inquiry.status = result.tracking.status;
+        badge.dataset.status = result.tracking.status;
+        badge.textContent = result.tracking.status.replace("_", " ");
+        inquiry.notes = result.tracking.notes;
+        inquiry.followUpDate = result.tracking.followUpDate;
+        inquiryNewCount.textContent = `New inquiries: ${result.newCount}`;
+        trackingStatus.textContent = "Follow-up saved.";
+        if (inquiryStatusFilter.value !== "all" && inquiryStatusFilter.value !== result.tracking.status) {
+          await loadInquiries(currentInquiryPage);
+        }
+      } catch (error) {
+        trackingStatus.textContent = error.message;
+        trackingStatus.dataset.state = "error";
+      } finally {
+        saveTrackingButton.disabled = false;
+      }
+    });
+
+    card.append(header, contact, message, trackingForm);
     inquiryList.append(card);
   }
 }
@@ -882,7 +967,8 @@ async function loadInquiries(page = 1) {
   try {
     const params = new URLSearchParams({
       page: String(page),
-      q: inquirySearch.value.trim()
+      q: inquirySearch.value.trim(),
+      status: inquiryStatusFilter.value
     });
     const result = await request(`/api/admin/inquiries?${params}`);
     if (
@@ -890,11 +976,13 @@ async function loadInquiries(page = 1) {
       || !Number.isSafeInteger(result.pagination?.page)
       || !Number.isSafeInteger(result.pagination?.pageCount)
       || !Number.isSafeInteger(result.pagination?.total)
+      || !Number.isSafeInteger(result.pagination?.newCount)
     ) {
       throw new Error("The inquiry inbox response was invalid.");
     }
     currentInquiryPage = result.pagination.page;
     inquiryPageCount = result.pagination.pageCount;
+    inquiryNewCount.textContent = `New inquiries: ${result.pagination.newCount}`;
     renderInquiries(result.inquiries);
     inquiryPageLabel.textContent = `Page ${currentInquiryPage} of ${inquiryPageCount} · ${result.pagination.total} total`;
     previousInquiriesButton.disabled = currentInquiryPage <= 1;
@@ -911,7 +999,10 @@ async function loadInquiries(page = 1) {
 }
 
 async function exportInquiries() {
-  const params = new URLSearchParams({ q: inquirySearch.value.trim() });
+  const params = new URLSearchParams({
+    q: inquirySearch.value.trim(),
+    status: inquiryStatusFilter.value
+  });
   setStatus(inquiryStatus, "Preparing CSV export…");
   try {
     const response = await fetch(`/api/admin/inquiries/export?${params}`, {

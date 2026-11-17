@@ -16,6 +16,7 @@ const adminSessionDuration = 8 * 60 * 60;
 const siteContentHistoryLimit = 25;
 const inquiryPageSize = 25;
 const inquiryExportLimit = 1000;
+const inquiryStatuses = new Set(["new", "contacted", "in_progress", "closed"]);
 
 function parseContent(value) {
   return typeof value === "string" ? JSON.parse(value) : value;
@@ -49,8 +50,42 @@ function getInquirySearch(request, response) {
   return search.trim();
 }
 
-function inquirySearchClause() {
-  return "(? = '' OR LOCATE(LOWER(?), LOWER(CONCAT_WS(' ', name, email, service))) > 0)";
+function getInquiryStatus(request, response) {
+  const status = request.query.status ?? "all";
+  if (typeof status !== "string" || (status !== "all" && !inquiryStatuses.has(status))) {
+    response.status(400).json({ error: "Choose a valid inquiry status." });
+    return null;
+  }
+  return status;
+}
+
+function inquirySearchClause(alias = "inquiry") {
+  return `(? = '' OR LOCATE(LOWER(?), LOWER(CONCAT_WS(' ', ${alias}.name, ${alias}.email, ${alias}.service))) > 0)`;
+}
+
+function getFollowUpDate(value) {
+  if (value === null || value === "") return { value: null };
+  const parsedDate = typeof value === "string" ? Date.parse(`${value}T00:00:00.000Z`) : Number.NaN;
+  if (
+    typeof value !== "string"
+    || !/^\d{4}-\d{2}-\d{2}$/.test(value)
+    || Number(value.slice(0, 4)) < 1000
+    || !Number.isFinite(parsedDate)
+    || new Date(parsedDate).toISOString().slice(0, 10) !== value
+  ) {
+    return { error: "Choose a valid follow-up date." };
+  }
+  return { value };
+}
+
+async function getNewInquiryCount(pool) {
+  const [rows] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM contact_messages AS inquiry
+     LEFT JOIN contact_message_tracking AS tracking ON tracking.message_id = inquiry.id
+     WHERE COALESCE(tracking.status, 'new') = 'new'`
+  );
+  return Number(rows[0]?.total || 0);
 }
 
 function csvCell(value) {
@@ -108,7 +143,7 @@ function getImageExtension(buffer) {
   return null;
 }
 
-export function createApp(pool, adminConfig = {}) {
+export function createApp(pool, adminConfig = {}, { sendInquiryEmail } = {}) {
   const app = express();
   const adminIsConfigured = typeof adminConfig.username === "string"
     && adminConfig.username.trim().length > 0
@@ -271,9 +306,15 @@ export function createApp(pool, adminConfig = {}) {
   app.get("/api/admin/inquiries/export", requireAdmin, async (request, response) => {
     const search = getInquirySearch(request, response);
     if (search === null) return;
-    const searchParams = [search, search];
+    const status = getInquiryStatus(request, response);
+    if (status === null) return;
+    const searchParams = [search, search, status, status];
     const [countRows] = await pool.execute(
-      `SELECT COUNT(*) AS total FROM contact_messages WHERE ${inquirySearchClause()}`,
+      `SELECT COUNT(*) AS total
+       FROM contact_messages AS inquiry
+       LEFT JOIN contact_message_tracking AS tracking ON tracking.message_id = inquiry.id
+       WHERE ${inquirySearchClause()}
+         AND (? = 'all' OR COALESCE(tracking.status, 'new') = ?)`,
       searchParams
     );
     const total = Number(countRows[0]?.total || 0);
@@ -285,22 +326,29 @@ export function createApp(pool, adminConfig = {}) {
     }
 
     const [rows] = await pool.execute(
-      `SELECT id, name, email, service, message, created_at
-       FROM contact_messages
+      `SELECT inquiry.id, inquiry.name, inquiry.email, inquiry.service, inquiry.message, inquiry.created_at,
+              COALESCE(tracking.status, 'new') AS status, tracking.internal_notes,
+              DATE_FORMAT(tracking.follow_up_date, '%Y-%m-%d') AS follow_up_date
+       FROM contact_messages AS inquiry
+       LEFT JOIN contact_message_tracking AS tracking ON tracking.message_id = inquiry.id
        WHERE ${inquirySearchClause()}
-       ORDER BY id DESC
+         AND (? = 'all' OR COALESCE(tracking.status, 'new') = ?)
+       ORDER BY inquiry.id DESC
        LIMIT ${inquiryExportLimit}`,
       searchParams
     );
     const csvRows = [
-      ["ID", "Received", "Name", "Email", "Service", "Message"],
+      ["ID", "Received", "Name", "Email", "Service", "Message", "Status", "Internal notes", "Follow-up date"],
       ...rows.map((row) => [
         row.id,
         row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
         row.name,
         row.email,
         row.service,
-        row.message
+        row.message,
+        row.status,
+        row.internal_notes,
+        row.follow_up_date
       ])
     ];
     const csv = `\uFEFF${csvRows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
@@ -313,15 +361,21 @@ export function createApp(pool, adminConfig = {}) {
   app.get("/api/admin/inquiries", requireAdmin, async (request, response) => {
     const search = getInquirySearch(request, response);
     if (search === null) return;
+    const status = getInquiryStatus(request, response);
+    if (status === null) return;
     const requestedPage = request.query.page === undefined ? 1 : Number(request.query.page);
     if (!Number.isSafeInteger(requestedPage) || requestedPage < 1) {
       response.status(400).json({ error: "Choose a valid inbox page." });
       return;
     }
 
-    const searchParams = [search, search];
+    const searchParams = [search, search, status, status];
     const [countRows] = await pool.execute(
-      `SELECT COUNT(*) AS total FROM contact_messages WHERE ${inquirySearchClause()}`,
+      `SELECT COUNT(*) AS total
+       FROM contact_messages AS inquiry
+       LEFT JOIN contact_message_tracking AS tracking ON tracking.message_id = inquiry.id
+       WHERE ${inquirySearchClause()}
+         AND (? = 'all' OR COALESCE(tracking.status, 'new') = ?)`,
       searchParams
     );
     const total = Number(countRows[0]?.total || 0);
@@ -329,13 +383,18 @@ export function createApp(pool, adminConfig = {}) {
     const page = Math.min(requestedPage, pageCount);
     const offset = (page - 1) * inquiryPageSize;
     const [rows] = await pool.execute(
-      `SELECT id, name, email, service, message, created_at
-       FROM contact_messages
+      `SELECT inquiry.id, inquiry.name, inquiry.email, inquiry.service, inquiry.message, inquiry.created_at,
+              COALESCE(tracking.status, 'new') AS status, tracking.internal_notes,
+              DATE_FORMAT(tracking.follow_up_date, '%Y-%m-%d') AS follow_up_date
+       FROM contact_messages AS inquiry
+       LEFT JOIN contact_message_tracking AS tracking ON tracking.message_id = inquiry.id
        WHERE ${inquirySearchClause()}
-       ORDER BY id DESC
+         AND (? = 'all' OR COALESCE(tracking.status, 'new') = ?)
+       ORDER BY inquiry.id DESC
        LIMIT ${inquiryPageSize} OFFSET ?`,
       [...searchParams, offset]
     );
+    const newCount = await getNewInquiryCount(pool);
     response.set("Cache-Control", "no-store");
     response.json({
       inquiries: rows.map((row) => ({
@@ -344,10 +403,55 @@ export function createApp(pool, adminConfig = {}) {
         email: row.email,
         service: row.service,
         message: row.message,
-        createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString()
+        createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
+        status: row.status,
+        notes: row.internal_notes || "",
+        followUpDate: row.follow_up_date || null
       })),
-      pagination: { page, pageCount, total }
+      pagination: { page, pageCount, total, newCount }
     });
+  });
+
+  app.put("/api/admin/inquiries/:inquiryId/tracking", requireSameOrigin, requireAdmin, async (request, response) => {
+    const inquiryId = Number(request.params.inquiryId);
+    if (!Number.isSafeInteger(inquiryId) || inquiryId < 1) {
+      response.status(400).json({ error: "Choose a valid inquiry." });
+      return;
+    }
+
+    const { status, notes, followUpDate: rawFollowUpDate } = request.body || {};
+    if (typeof status !== "string" || !inquiryStatuses.has(status)) {
+      response.status(400).json({ error: "Choose a valid inquiry status." });
+      return;
+    }
+    if (typeof notes !== "string" || notes.length > 2000) {
+      response.status(400).json({ error: "Internal notes must be 2,000 characters or fewer." });
+      return;
+    }
+    const followUpDate = getFollowUpDate(rawFollowUpDate);
+    if (followUpDate.error) {
+      response.status(400).json({ error: followUpDate.error });
+      return;
+    }
+
+    const [inquiries] = await pool.execute(
+      "SELECT id FROM contact_messages WHERE id = ?",
+      [inquiryId]
+    );
+    if (!inquiries.length) {
+      response.status(404).json({ error: "That inquiry could not be found." });
+      return;
+    }
+
+    await pool.execute(
+      `INSERT INTO contact_message_tracking (message_id, status, internal_notes, follow_up_date)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE status = VALUES(status), internal_notes = VALUES(internal_notes),
+         follow_up_date = VALUES(follow_up_date)`,
+      [inquiryId, status, notes.trim(), followUpDate.value]
+    );
+    response.set("Cache-Control", "no-store");
+    response.json({ tracking: { status, notes: notes.trim(), followUpDate: followUpDate.value }, newCount: await getNewInquiryCount(pool) });
   });
 
   app.get("/api/admin/media", requireAdmin, async (_request, response) => {
@@ -629,10 +733,27 @@ export function createApp(pool, adminConfig = {}) {
           validation.value.message
         ]
       );
-      response.status(201).json({ message: "Thanks for reaching out. We'll be in touch soon." });
     } catch (error) {
       next(error);
+      return;
     }
+
+    let emailSent = false;
+    if (sendInquiryEmail) {
+      try {
+        await sendInquiryEmail(validation.value);
+        emailSent = true;
+      } catch (error) {
+        console.error("Inquiry email notification failed:", error);
+      }
+    }
+
+    response.status(201).json({
+      emailSent,
+      message: emailSent
+        ? "Thanks for reaching out. Your inquiry was saved and sent to our team."
+        : "Thanks for reaching out. Your inquiry was saved, but email notification is unavailable. You can also reach us at info.uiflowlabs@gmail.com."
+    });
   });
 
   app.use((_request, response) => {

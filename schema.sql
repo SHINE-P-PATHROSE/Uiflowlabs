@@ -15,6 +15,17 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   INDEX idx_contact_messages_created_at (created_at)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS contact_message_tracking (
+  message_id BIGINT UNSIGNED NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'new',
+  internal_notes TEXT NOT NULL,
+  follow_up_date DATE NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (message_id),
+  CONSTRAINT chk_contact_message_tracking_status
+    CHECK (status IN ('new', 'contacted', 'in_progress', 'closed'))
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS site_content (
   id TINYINT UNSIGNED NOT NULL,
   published_content JSON NOT NULL,

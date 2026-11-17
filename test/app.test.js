@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { createApp } from "../src/app.js";
 import { DEFAULT_SITE_CONTENT } from "../src/site-content.js";
 
-async function withServer(pool, run, adminConfig) {
-  const server = createApp(pool, adminConfig).listen(0);
+async function withServer(pool, run, adminConfig, options) {
+  const server = createApp(pool, adminConfig, options).listen(0);
   await new Promise((resolve) => server.once("listening", resolve));
   const address = server.address();
 
@@ -370,21 +370,31 @@ test("admin inquiry inbox is protected, searchable, paginated, and exports safe 
   }));
   const pool = {
     async execute(query, values = []) {
-      if (query.startsWith("SELECT COUNT(*) AS total FROM contact_messages")) {
-        const [search] = values;
+      if (query.includes("WHERE COALESCE(tracking.status, 'new') = 'new'")) {
+        return [[{ total: inquiries.length }], []];
+      }
+      if (query.includes("SELECT COUNT(*) AS total") && query.includes("FROM contact_messages AS inquiry")) {
+        const [search, , status] = values;
         const matching = inquiries.filter((item) =>
           `${item.name} ${item.email} ${item.service}`.toLowerCase().includes(search.toLowerCase())
+          && (status === "all" || status === "new")
         );
         return [[{ total: matching.length }], []];
       }
-      if (query.includes("FROM contact_messages") && query.includes("ORDER BY id DESC")) {
-        const [search] = values;
+      if (query.includes("FROM contact_messages AS inquiry") && query.includes("ORDER BY inquiry.id DESC")) {
+        const [search, , status] = values;
         const matching = inquiries.filter((item) =>
           `${item.name} ${item.email} ${item.service}`.toLowerCase().includes(search.toLowerCase())
+          && (status === "all" || status === "new")
         ).sort((left, right) => right.id - left.id);
-        const offset = query.includes("OFFSET ?") ? Number(values[2]) : 0;
+        const offset = query.includes("OFFSET ?") ? Number(values[4]) : 0;
         const limit = query.includes("OFFSET ?") ? 25 : 1000;
-        return [matching.slice(offset, offset + limit), []];
+        return [matching.slice(offset, offset + limit).map((item) => ({
+          ...item,
+          status: "new",
+          internal_notes: null,
+          follow_up_date: null
+        })), []];
       }
       throw new Error(`Unexpected query: ${query}`);
     }
@@ -410,8 +420,10 @@ test("admin inquiry inbox is protected, searchable, paginated, and exports safe 
     const firstPage = await fetch(`${baseUrl}/api/admin/inquiries?page=1`, { headers });
     const firstPageData = await firstPage.json();
     assert.equal(firstPageData.pagination.total, 30);
+    assert.equal(firstPageData.pagination.newCount, 30);
     assert.equal(firstPageData.inquiries.length, 25);
     assert.equal(firstPageData.inquiries[0].id, "30");
+    assert.equal(firstPageData.inquiries[0].status, "new");
 
     const secondPage = await fetch(`${baseUrl}/api/admin/inquiries?page=2`, { headers });
     const secondPageData = await secondPage.json();
@@ -423,11 +435,130 @@ test("admin inquiry inbox is protected, searchable, paginated, and exports safe 
     assert.equal(searchData.pagination.total, 1);
     assert.equal(searchData.inquiries[0].service, "Website development");
 
-    const exportResponse = await fetch(`${baseUrl}/api/admin/inquiries/export?q=formula`, { headers });
+    const statusFilter = await fetch(`${baseUrl}/api/admin/inquiries?status=contacted`, { headers });
+    assert.equal((await statusFilter.json()).pagination.total, 0);
+
+    const exportResponse = await fetch(`${baseUrl}/api/admin/inquiries/export?q=formula&status=new`, { headers });
     assert.equal(exportResponse.status, 200);
     const csv = await exportResponse.text();
     assert.match(csv, /"'\=formula,cmd"/);
+    assert.match(csv, /"Status","Internal notes","Follow-up date"/);
     assert.match(exportResponse.headers.get("content-disposition"), /attachment/);
+  }, adminConfig);
+});
+
+test("admin can update private inquiry status, notes, and follow-up date", async () => {
+  let tracking = null;
+  const inquiry = {
+    id: 1,
+    name: "Alex Doe",
+    email: "alex@example.com",
+    service: "Website development",
+    message: "I need a site.",
+    created_at: new Date("2026-01-01T12:00:00.000Z")
+  };
+  const pool = {
+    async execute(query, values = []) {
+      if (query.startsWith("SELECT id FROM contact_messages WHERE id = ?")) {
+        return [Number(values[0]) === inquiry.id ? [{ id: inquiry.id }] : [], []];
+      }
+      if (query.startsWith("INSERT INTO contact_message_tracking")) {
+        tracking = {
+          status: values[1],
+          internal_notes: values[2],
+          follow_up_date: values[3]
+        };
+        return [{ affectedRows: 1 }, []];
+      }
+      if (query.includes("WHERE COALESCE(tracking.status, 'new') = 'new'")) {
+        return [[{ total: tracking?.status === "new" || !tracking ? 1 : 0 }], []];
+      }
+      if (query.includes("SELECT COUNT(*) AS total") && query.includes("FROM contact_messages AS inquiry")) {
+        const status = values[2];
+        return [[{ total: status === "all" || status === (tracking?.status || "new") ? 1 : 0 }], []];
+      }
+      if (query.includes("FROM contact_messages AS inquiry") && query.includes("ORDER BY inquiry.id DESC")) {
+        const status = values[2];
+        if (status !== "all" && status !== (tracking?.status || "new")) return [[], []];
+        return [[{
+          ...inquiry,
+          status: tracking?.status || "new",
+          internal_notes: tracking?.internal_notes || null,
+          follow_up_date: tracking?.follow_up_date || null
+        }], []];
+      }
+      throw new Error(`Unexpected query: ${query}`);
+    }
+  };
+  const adminConfig = {
+    username: "site-admin",
+    password: "a-strong-password-123",
+    sessionSecret: "a-secure-session-secret-that-is-at-least-32-bytes"
+  };
+
+  await withServer(pool, async (baseUrl) => {
+    const unauthorized = await fetch(`${baseUrl}/api/admin/inquiries/1/tracking`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Origin: baseUrl },
+      body: JSON.stringify({ status: "contacted", notes: "", followUpDate: null })
+    });
+    assert.equal(unauthorized.status, 401);
+
+    const login = await fetch(`${baseUrl}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: baseUrl },
+      body: JSON.stringify({ username: adminConfig.username, password: adminConfig.password })
+    });
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const headers = { "Content-Type": "application/json", Origin: baseUrl, Cookie: cookie };
+
+    const invalidStatus = await fetch(`${baseUrl}/api/admin/inquiries/1/tracking`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ status: "waiting", notes: "", followUpDate: null })
+    });
+    assert.equal(invalidStatus.status, 400);
+
+    const invalidDate = await fetch(`${baseUrl}/api/admin/inquiries/1/tracking`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ status: "contacted", notes: "", followUpDate: "2026-02-30" })
+    });
+    assert.equal(invalidDate.status, 400);
+
+    const updated = await fetch(`${baseUrl}/api/admin/inquiries/1/tracking`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        status: "in_progress",
+        notes: "Sent the proposal; follow up next week.",
+        followUpDate: "2026-02-20"
+      })
+    });
+    assert.equal(updated.status, 200);
+    assert.deepEqual(await updated.json(), {
+      tracking: {
+        status: "in_progress",
+        notes: "Sent the proposal; follow up next week.",
+        followUpDate: "2026-02-20"
+      },
+      newCount: 0
+    });
+
+    const filtered = await fetch(`${baseUrl}/api/admin/inquiries?status=in_progress`, {
+      headers: { Cookie: cookie }
+    });
+    const result = await filtered.json();
+    assert.equal(result.pagination.total, 1);
+    assert.equal(result.inquiries[0].notes, "Sent the proposal; follow up next week.");
+    assert.equal(result.inquiries[0].followUpDate, "2026-02-20");
+
+    const unknownInquiry = await fetch(`${baseUrl}/api/admin/inquiries/999/tracking`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ status: "closed", notes: "", followUpDate: null })
+    });
+    assert.equal(unknownInquiry.status, 404);
   }, adminConfig);
 });
 
@@ -440,6 +571,7 @@ test("admin content endpoints stay disabled without server credentials", async (
 
 test("contact endpoint stores validated fields and returns success", async () => {
   let inserted;
+  let emailed;
   const pool = {
     async execute(query, values) {
       inserted = { query, values };
@@ -461,12 +593,55 @@ test("contact endpoint stores validated fields and returns success", async () =>
 
     assert.equal(response.status, 201);
     assert.deepEqual(await response.json(), {
-      message: "Thanks for reaching out. We'll be in touch soon."
+      emailSent: true,
+      message: "Thanks for reaching out. Your inquiry was saved and sent to our team."
     });
+  }, undefined, {
+    sendInquiryEmail: async (inquiry) => { emailed = inquiry; }
   });
 
   assert.equal(inserted.query, "INSERT INTO contact_messages (name, email, service, message) VALUES (?, ?, ?, ?)");
   assert.deepEqual(inserted.values, ["Alex Doe", "alex@example.com", "Website development", "I need a new site."]);
+  assert.deepEqual(emailed, {
+    name: "Alex Doe",
+    email: "alex@example.com",
+    service: "Website development",
+    message: "I need a new site."
+  });
+});
+
+test("contact endpoint keeps the inquiry when email delivery fails", async () => {
+  let wasWritten = false;
+  const loggedErrors = [];
+  const originalConsoleError = console.error;
+  console.error = (...args) => loggedErrors.push(args);
+  try {
+    await withServer({
+      async execute() { wasWritten = true; }
+    }, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Alex Doe",
+          email: "alex@example.com",
+          message: "I need a new site."
+        })
+      });
+
+      assert.equal(response.status, 201);
+      assert.deepEqual(await response.json(), {
+        emailSent: false,
+        message: "Thanks for reaching out. Your inquiry was saved, but email notification is unavailable. You can also reach us at info.uiflowlabs@gmail.com."
+      });
+    }, undefined, {
+      async sendInquiryEmail() { throw new Error("SMTP unavailable"); }
+    });
+  } finally {
+    console.error = originalConsoleError;
+  }
+  assert.equal(wasWritten, true);
+  assert.equal(loggedErrors.length, 1);
 });
 
 test("contact endpoint rejects invalid input without writing to the database", async () => {
